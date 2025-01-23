@@ -23,13 +23,29 @@ class VehicleController extends AbstractController
 {
     // Liste tous les véhicules avec leur statut de disponibilité
     #[Route('/', name: 'app_vehicle_index', methods: ['GET'])]
-    public function index(VehicleRepository $vehicleRepository, ReservationDateService $dateService): Response
+    public function index(Request $request, VehicleRepository $vehicleRepository, ReservationDateService $dateService): Response
     {
-        $vehicles = $vehicleRepository->findAll();
+        $filterForm = $this->createForm(VehicleFilterType::class);
+        $filterForm->handleRequest($request);
+
+        if ($filterForm->isSubmitted() && $filterForm->isValid()) {
+            // Récupérer les données du filtre
+            $filterData = $filterForm->getData();
+            // Utiliser les filtres pour récupérer les véhicules
+            $vehicles = $vehicleRepository->findByFilters($filterData);
+        } else {
+            // Si pas de filtre, récupérer tous les véhicules
+            $vehicles = $vehicleRepository->findAll();
+        }
+
         foreach ($vehicles as $vehicle) {
             $vehicle->setIsAvailable($dateService->isVehicleAvailableToday($vehicle));
         }
-        return $this->render('vehicle/index.html.twig', ['vehicles' => $vehicles]);
+
+        return $this->render('vehicle/index.html.twig', [
+            'vehicles' => $vehicles,
+            'filterForm' => $filterForm->createView()
+        ]);
     }
 
     // Création d'un nouveau véhicule (réservé aux admins)
