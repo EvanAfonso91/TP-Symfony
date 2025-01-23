@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau Véhicule{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h1 class="h3 mb-4 text-center">Ajouter un nouveau véhicule</h1>
+
+                        {{ form_start(form) }}
+                            <div class="mb-3">
+                                {{ form_row(form.brand) }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.model) }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.registrationNumber) }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.type) }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.description) }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.pricePerDay) }}
+                            </div>
+                            <div class="mb-3">
+                                {{ form_row(form.isAvailable) }}
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                <a href="{{ path('app_vehicle_index') }}" class="btn btn-secondary me-md-2">Retour</a>
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            </div>
+                        {{ form_end(form) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

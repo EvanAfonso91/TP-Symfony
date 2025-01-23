@@ -1,0 +1,46 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier l'utilisateur{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h1 class="h3 mb-4">Modifier l'utilisateur</h1>
+
+                        <form method="post">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="text" class="form-control" value="{{ user.email }}" disabled>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Rôles</label>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="roles[]" value="ROLE_ADMIN" 
+                                           {% if 'ROLE_ADMIN' in user.roles %}checked{% endif %}
+                                           {% if user == app.user %}disabled{% endif %}>
+                                    <label class="form-check-label">Administrateur</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="roles[]" value="ROLE_USER" 
+                                           {% if 'ROLE_USER' in user.roles %}checked{% endif %} checked disabled>
+                                    <label class="form-check-label">Utilisateur</label>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{{ path('app_user_index') }}" class="btn btn-secondary me-md-2">Retour</a>
+                                {% if user != app.user %}
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %} 

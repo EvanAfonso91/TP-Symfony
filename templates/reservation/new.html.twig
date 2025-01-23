@@ -1,0 +1,130 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle Réservation{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h1 class="h3 mb-4 text-center">Nouvelle Réservation</h1>
+
+                        {{ form_start(form) }}
+                            {{ form_widget(form) }}
+                            <div id="dateError" class="alert alert-danger mt-3" style="display: none;"></div>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                <a href="{{ path('app_vehicle_index') }}" class="btn btn-secondary me-md-2">Retour</a>
+                                <button type="submit" class="btn btn-primary" id="submitButton">Réserver</button>
+                            </div>
+                        {{ form_end(form) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startDateInput = document.querySelector('#reservation_startDate');
+            const endDateInput = document.querySelector('#reservation_endDate');
+            const submitButton = document.querySelector('#submitButton');
+            const errorDiv = document.querySelector('#dateError');
+            const unavailableDates = {{ unavailableDates|raw }};
+            const vehicleId = {{ vehicleId }};
+
+            // Convertir les dates indisponibles en objets Date pour une meilleure comparaison
+            const unavailablePeriods = [];
+            let currentPeriod = [];
+            
+            // Trier les dates indisponibles
+            const sortedDates = unavailableDates.sort();
+            
+            // Créer des périodes à partir des dates indisponibles consécutives
+            for (let i = 0; i < sortedDates.length; i++) {
+                const currentDate = new Date(sortedDates[i]);
+                const nextDate = i < sortedDates.length - 1 ? new Date(sortedDates[i + 1]) : null;
+                
+                if (currentPeriod.length === 0) {
+                    currentPeriod.push(currentDate);
+                } else if (nextDate && (nextDate - currentDate) / (1000 * 60 * 60 * 24) === 1) {
+                    currentPeriod.push(currentDate);
+                } else {
+                    currentPeriod.push(currentDate);
+                    unavailablePeriods.push({
+                        start: currentPeriod[0],
+                        end: currentPeriod[currentPeriod.length - 1]
+                    });
+                    currentPeriod = [];
+                }
+            }
+
+            // Récupérer l'ID du véhicule sélectionné
+            function getSelectedVehicleId() {
+                const vehicleSelect = document.querySelector('#reservation_vehicle');
+                return vehicleSelect ? vehicleSelect.value : '';
+            }
+
+            function validateDates() {
+                const startDate = new Date(startDateInput.value);
+                const endDate = new Date(endDateInput.value);
+                
+                // Réinitialiser l'affichage
+                errorDiv.style.display = 'none';
+                submitButton.disabled = false;
+
+                // Vérifier si les dates sont remplies
+                if (!startDateInput.value || !endDateInput.value) {
+                    return;
+                }
+
+                // Vérifier que la date de fin est après la date de début
+                if (endDate <= startDate) {
+                    errorDiv.textContent = 'La date de fin doit être postérieure à la date de début';
+                    errorDiv.style.display = 'block';
+                    submitButton.disabled = true;
+                    return;
+                }
+
+                // Vérifier les chevauchements avec les périodes indisponibles
+                for (const period of unavailablePeriods) {
+                    // Vérifier si la période demandée chevauche une période indisponible
+                    if ((startDate <= period.end) && (endDate >= period.start)) {
+                        // Trouver la prochaine date disponible après la dernière date indisponible
+                        let nextAvailable = new Date(period.end);
+                        nextAvailable.setDate(nextAvailable.getDate() + 1);
+
+                        // Vérifier si cette nouvelle date est aussi dans une autre période indisponible
+                        while (unavailablePeriods.some(p => 
+                            nextAvailable >= p.start && nextAvailable <= p.end)) {
+                            nextAvailable.setDate(nextAvailable.getDate() + 1);
+                        }
+
+                        errorDiv.innerHTML = `Le véhicule n'est pas disponible pour ces dates. Prochaine disponibilité à partir du ${nextAvailable.toLocaleDateString('fr-FR')}.<br>
+                        <a href="{{ path('app_availability') }}?vehicle=${vehicleId}" class="alert-link">Consulter le calendrier des disponibilités</a>`;
+                        errorDiv.style.display = 'block';
+                        submitButton.disabled = true;
+                        return;
+                    }
+                }
+            }
+
+            // Ajouter les écouteurs d'événements
+            startDateInput.addEventListener('change', validateDates);
+            endDateInput.addEventListener('change', validateDates);
+
+            // Définir la date minimale à aujourd'hui
+            const today = new Date().toISOString().split('T')[0];
+            startDateInput.min = today;
+            endDateInput.min = today;
+
+            // Mettre à jour la date minimale de fin quand la date de début change
+            startDateInput.addEventListener('change', function() {
+                endDateInput.min = this.value;
+            });
+        });
+    </script>
+{% endblock %}

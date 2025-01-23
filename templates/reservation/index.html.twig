@@ -1,0 +1,111 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Réservations{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .card-body {
+            overflow: visible !important;
+        }
+        .table-responsive {
+            overflow: visible !important;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Liste des Réservations</h1>
+            <a href="{{ path('app_reservation_new') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nouvelle Réservation
+            </a>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Client</th>
+                                <th>Véhicule</th>
+                                <th>Début</th>
+                                <th>Fin</th>
+                                <th>Prix Total</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reservation in reservations %}
+                                <tr>
+                                    <td>{{ reservation.id }}</td>
+                                    <td>{{ reservation.user.email }}</td>
+                                    <td>{{ reservation.vehicle.brand }} {{ reservation.vehicle.model }}</td>
+                                    <td>{{ reservation.startDate|date('d/m/Y') }}</td>
+                                    <td>{{ reservation.endDate|date('d/m/Y') }}</td>
+                                    <td>{{ reservation.totalPrice }} €</td>
+                                    <td>
+                                        <span class="badge {% if reservation.status == 'CONFIRMEE' %}bg-success{% elseif reservation.status == 'EN_ATTENTE' %}bg-warning{% elseif reservation.status == 'TERMINEE' %}bg-info{% else %}bg-danger{% endif %}">
+                                            {{ reservation.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if is_granted('ROLE_ADMIN') or app.user == reservation.user %}
+                                            <div class="btn-group" role="group">
+                                                {% if reservation.status != 'TERMINEE' and reservation.status != 'ANNULEE' and reservation.startDate > date() %}
+                                                    <a href="{{ path('app_reservation_edit', {'id': reservation.id}) }}" class="btn btn-sm btn-warning text-white" title="Modifier">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="post" action="{{ path('app_reservation_cancel', {'id': reservation.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette réservation ?');" style="display: inline-block;">
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('cancel' ~ reservation.id) }}">
+                                                        <button class="btn btn-sm btn-danger text-white" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                
+                                                {% if is_granted('ROLE_ADMIN') %}
+                                                    <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="dropdown" title="Changer le statut">
+                                                        <i class="fas fa-cog"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            <form action="{{ path('app_reservation_status', {'id': reservation.id}) }}" method="post">
+                                                                <input type="hidden" name="status" value="CONFIRMEE">
+                                                                <button type="submit" class="dropdown-item">Confirmer</button>
+                                                            </form>
+                                                        </li>
+                                                        <li>
+                                                            <form action="{{ path('app_reservation_status', {'id': reservation.id}) }}" method="post">
+                                                                <input type="hidden" name="status" value="TERMINEE">
+                                                                <button type="submit" class="dropdown-item">Terminer</button>
+                                                            </form>
+                                                        </li>
+                                                        <li>
+                                                            <form action="{{ path('app_reservation_status', {'id': reservation.id}) }}" method="post">
+                                                                <input type="hidden" name="status" value="ANNULEE">
+                                                                <button type="submit" class="dropdown-item">Annuler</button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center">Aucune réservation trouvée</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %} 

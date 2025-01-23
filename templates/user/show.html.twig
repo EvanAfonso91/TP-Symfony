@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de l'utilisateur{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h1 class="h3 mb-4">Détails de l'utilisateur</h1>
+
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <th>Email</th>
+                                    <td>{{ user.email }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Rôles</th>
+                                    <td>
+                                        {% for role in user.roles %}
+                                            <span class="badge {% if role == 'ROLE_ADMIN' %}bg-danger{% else %}bg-primary{% endif %}">
+                                                {{ role|replace({'ROLE_': ''}) }}
+                                            </span>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Date d'inscription</th>
+                                    <td>{{ user.createdAt ? user.createdAt|date('d/m/Y H:i') : '' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ path('app_user_index') }}" class="btn btn-secondary me-md-2">Retour</a>
+                            <a href="{{ path('app_user_edit', {'id': user.id}) }}" class="btn btn-warning text-white">Modifier</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %} 

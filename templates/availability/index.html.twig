@@ -1,0 +1,231 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Calendrier des disponibilités{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <style>
+        .vehicle-selector {
+            margin: 20px 0;
+            max-width: 400px;
+        }
+        #calendar {
+            margin: 20px 0;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        }
+        /* Style pour les jours */
+        .fc-daygrid-day {
+            transition: all 0.3s ease;
+        }
+        .fc-day-unavailable .fc-daygrid-day-frame {
+            background-color: rgba(255, 82, 82, 0.25) !important;
+            margin: 2px;
+            border-radius: 8px;
+        }
+        .fc-day-available .fc-daygrid-day-frame {
+            background-color: rgba(72, 187, 120, 0.25) !important;
+            margin: 2px;
+            border-radius: 8px;
+        }
+        /* Style pour les jours du mois précédent/suivant */
+        .fc-day-other {
+            opacity: 0.4;
+        }
+        /* Style pour le header du calendrier */
+        .fc-toolbar-title {
+            font-size: 1.6em !important;
+            font-weight: 600 !important;
+            color: #2d3748;
+            text-transform: capitalize;
+        }
+        /* Style pour les boutons */
+        .fc-button-primary {
+            background-color: #4a5568 !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            padding: 8px 16px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+        }
+        .fc-button-primary:hover {
+            background-color: #2d3748 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+        }
+        .fc-button-primary:not(:disabled):active {
+            background-color: #1a202c !important;
+            transform: translateY(1px);
+        }
+        /* Style pour les en-têtes des jours */
+        .fc-col-header-cell {
+            background-color: #f7fafc;
+            padding: 12px 0 !important;
+            text-transform: capitalize;
+        }
+        .fc-col-header-cell-cushion {
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        /* Style pour les cellules des jours */
+        .fc-daygrid-day-frame {
+            min-height: 100px !important;
+            padding: 8px !important;
+        }
+        .fc-daygrid-day-number {
+            color: #2d3748;
+            font-weight: 500;
+            font-size: 0.9em;
+            padding: 4px 8px !important;
+        }
+        /* Style pour aujourd'hui */
+        .fc-day-today .fc-daygrid-day-frame {
+            border: 2px solid #4299e1 !important;
+        }
+        .fc-day-today .fc-daygrid-day-number {
+            color: #4299e1;
+            font-weight: 600;
+        }
+        /* Style pour la grille */
+        .fc td, .fc th {
+            border: 1px solid #edf2f7 !important;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #calendar {
+                padding: 15px;
+            }
+            .fc-toolbar-title {
+                font-size: 1.2em !important;
+            }
+            .fc-daygrid-day-frame {
+                min-height: 70px !important;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="container">
+        <h1 class="mb-4">Calendrier des disponibilités</h1>
+
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="vehicle-selector">
+                    <select id="vehicleSelect" class="form-select">
+                        <option value="">Sélectionnez un véhicule</option>
+                        {% for vehicle in vehicles %}
+                            <option value="{{ vehicle.id }}">{{ vehicle.brand }} {{ vehicle.model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="#" id="reserveButton" class="btn btn-primary" style="display: none;">
+                    <i class="fas fa-calendar-plus me-2"></i>Réserver ce véhicule
+                </a>
+            </div>
+        </div>
+
+        <div id="calendar"></div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar');
+            const vehicleSelect = document.getElementById('vehicleSelect');
+            const reserveButton = document.getElementById('reserveButton');
+            let calendar;
+
+            function updateReserveButton(vehicleId) {
+                if (vehicleId) {
+                    reserveButton.style.display = 'inline-block';
+                    reserveButton.href = '{{ path('app_reservation_new') }}?vehicle=' + vehicleId;
+                } else {
+                    reserveButton.style.display = 'none';
+                }
+            }
+
+            function initCalendar(unavailableDates = []) {
+                if (calendar) {
+                    calendar.destroy();
+                }
+
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: 'fr',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth'
+                    },
+                    firstDay: 1,
+                    height: 'auto',
+                    dayMaxEvents: true,
+                    fixedWeekCount: false,
+                    showNonCurrentDates: true,
+                    dayCellClassNames: function(arg) {
+                        const dateStr = arg.date.toISOString().split('T')[0];
+                        return unavailableDates.includes(dateStr) ? ['fc-day-unavailable'] : ['fc-day-available'];
+                    },
+                    buttonText: {
+                        today: 'Aujourd\'hui'
+                    },
+                    dayHeaderFormat: { weekday: 'long' }
+                });
+
+                calendar.render();
+            }
+
+            // Initialiser le calendrier vide
+            initCalendar();
+
+            // Récupérer le paramètre vehicle de l'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const preselectedVehicle = urlParams.get('vehicle');
+
+            // Si un véhicule est présélectionné, le sélectionner dans le select
+            if (preselectedVehicle) {
+                vehicleSelect.value = preselectedVehicle;
+                updateReserveButton(preselectedVehicle);
+                // Charger les dates pour le véhicule présélectionné
+                fetch(`/api/vehicle/${preselectedVehicle}/unavailable-dates`)
+                    .then(response => response.json())
+                    .then(data => {
+                        initCalendar(data);
+                    });
+            }
+
+            // Gérer le changement de véhicule
+            vehicleSelect.addEventListener('change', function() {
+                const vehicleId = this.value;
+                updateReserveButton(vehicleId);
+                
+                if (!vehicleId) {
+                    initCalendar();
+                    return;
+                }
+
+                // Charger les dates indisponibles pour le véhicule sélectionné
+                fetch(`/api/vehicle/${vehicleId}/unavailable-dates`)
+                    .then(response => response.json())
+                    .then(data => {
+                        initCalendar(data);
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors du chargement des disponibilités');
+                    });
+            });
+        });
+    </script>
+{% endblock %} 
