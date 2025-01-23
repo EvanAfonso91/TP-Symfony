@@ -3,163 +3,149 @@
 {% block title %}Détails du véhicule{% endblock %}
 
 {% block body %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8 mx-auto">
-                <div class="card shadow mb-4">
+<div class="container mt-4">
+    <div class="row">
+        {# Colonne de gauche : Détails du véhicule #}
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h1 class="card-title h2 mb-4">{{ vehicle.brand }} {{ vehicle.model }}</h1>
+                    
+                    {# Image du véhicule #}
                     {% if vehicle.image %}
                         <img src="{{ asset('uploads/vehicles/' ~ vehicle.image) }}" 
-                             alt="Image de {{ vehicle.brand }} {{ vehicle.model }}"
-                             class="card-img-top"
-                             style="max-height: 400px; object-fit: cover;">
+                             class="img-fluid rounded mb-4" 
+                             alt="{{ vehicle.brand }} {{ vehicle.model }}">
                     {% endif %}
-                    <div class="card-body">
-                        <h1 class="h3 mb-4">{{ vehicle.brand }} {{ vehicle.model }}</h1>
-                        
-                        <table class="table">
-                            <tbody>
-                                <tr>
-                                    <th>Immatriculation</th>
-                                    <td>{{ vehicle.registrationNumber }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Type</th>
-                                    <td>{{ vehicle.type }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Prix par jour</th>
-                                    <td>{{ vehicle.pricePerDay }} €</td>
-                                </tr>
-                                <tr>
-                                    <th>Description</th>
-                                    <td>{{ vehicle.description }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Disponible</th>
-                                    <td>
-                                        <span class="badge {% if vehicle.isAvailable %}bg-success{% else %}bg-danger{% endif %}">
-                                            {{ vehicle.isAvailable ? 'Oui' : 'Non' }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
 
-                        <div class="d-flex justify-content-between mt-3">
-                            <a href="{{ path('app_vehicle_index') }}" class="btn btn-secondary">Retour à la liste</a>
-                            <div>
-                                <a href="{{ path('app_availability') }}?vehicle={{ vehicle.id }}" class="btn btn-info me-2">
-                                    <i class="fas fa-calendar-alt"></i> Voir les disponibilités
-                                </a>
-                                {% if vehicle.isAvailable %}
-                                    <a href="{{ path('app_reservation_new', {'vehicle': vehicle.id}) }}" class="btn btn-success">
-                                        <i class="fas fa-calendar-plus"></i> Réserver
-                                    </a>
-                                {% endif %}
-                                {% if is_granted('ROLE_ADMIN') %}
-                                    <a href="{{ path('app_vehicle_edit', {'id': vehicle.id}) }}" class="btn btn-warning text-white">Modifier</a>
-                                {% endif %}
+                    {# Informations du véhicule #}
+                    <div class="vehicle-details">
+                        <div class="mb-4">
+                            <h4 class="h6 mb-3">Caractéristiques :</h4>
+                            <div class="row">
+                                {# Première colonne #}
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fas fa-car me-2"></i>Marque : {{ vehicle.brand }}</li>
+                                        <li class="mb-2"><i class="fas fa-info-circle me-2"></i>Modèle : {{ vehicle.model }}</li>
+                                        <li class="mb-2"><i class="fas fa-tag me-2"></i>Type : {{ vehicle.type }}</li>
+                                        <li class="mb-2"><i class="fas fa-euro-sign me-2"></i>Prix par jour : {{ vehicle.pricePerDay }}€</li>
+                                    </ul>
+                                </div>
+                                {# Deuxième colonne #}
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fas fa-id-card me-2"></i>Immatriculation : {{ vehicle.registrationNumber }}</li>
+                                        <li class="mb-2"><i class="fas fa-align-left me-2"></i>Description : {{ vehicle.description }}</li>
+                                        <li class="mb-2"><i class="fas fa-calendar-plus me-2"></i>Date d'ajout : {{ vehicle.createdAt|date('d/m/Y') }}</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                {# Section Commentaires #}
-                <div class="card shadow">
-                    <div class="card-body">
-                        <h2 class="h4 mb-4">Commentaires ({{ vehicle.comments|length }})</h2>
+                        <p class="mb-3">
+                            <span class="badge {% if vehicle.isAvailable %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ vehicle.isAvailable ? 'Disponible' : 'Indisponible' }}
+                            </span>
+                        </p>
                         
-                        {% if canComment %}
-                            {{ form_start(commentForm) }}
-                                <div class="mb-3">
-                                    {{ form_row(commentForm.rating) }}
-                                </div>
-                                <div class="mb-3">
-                                    {{ form_row(commentForm.content) }}
-                                </div>
-                                <button type="submit" class="btn btn-primary mb-4">Publier mon commentaire</button>
-                            {{ form_end(commentForm) }}
-                        {% endif %}
-
-                        <div class="mt-4">
-                            <div class="comments-header bg-light p-3 rounded d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleComments()">
-                                <h3 class="h5 mb-0">
-                                    <i class="fas fa-comments me-2"></i>
-                                    Commentaires ({{ vehicle.comments|length }})
-                                </h3>
-                                <i class="fas fa-chevron-down" id="commentsIcon"></i>
-                            </div>
+                        {# Boutons d'action #}
+                        <div class="d-flex gap-2 mt-4">
+                            <a href="{{ path('app_availability', {'vehicle': vehicle.id}) }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-calendar-alt me-2"></i>Voir les disponibilités
+                            </a>
                             
-                            <div id="commentsSection" style="display: none;" class="mt-3">
-                                {% if vehicle.comments is empty %}
-                                    <p class="text-muted">Aucun commentaire pour le moment.</p>
-                                {% else %}
-                                    {% for comment in vehicle.comments %}
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <h5 class="card-title mb-0">{{ comment.user.email }}</h5>
-                                                    <div class="d-flex align-items-center">
-                                                        <small class="text-muted me-3">{{ comment.createdAt|date('d/m/Y') }}</small>
-                                                        {% if app.user and (app.user == comment.user or is_granted('ROLE_ADMIN')) %}
-                                                            <div class="dropdown">
-                                                                <button class="btn btn-link text-dark p-0" type="button" data-bs-toggle="dropdown">
-                                                                    <i class="fas fa-ellipsis-v"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    {% if app.user == comment.user %}
-                                                                        <li>
-                                                                            <a href="{{ path('app_comment_edit', {'id': comment.id}) }}" 
-                                                                               class="dropdown-item">
-                                                                                <i class="fas fa-edit me-2"></i>Modifier
-                                                                            </a>
-                                                                        </li>
-                                                                    {% endif %}
-                                                                    {% if is_granted('ROLE_ADMIN') %}
-                                                                        <li>
-                                                                            <form action="{{ path('app_comment_delete', {'id': comment.id}) }}" 
-                                                                                  method="post" 
-                                                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?');">
-                                                                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ comment.id) }}">
-                                                                                <button type="submit" class="dropdown-item text-danger">
-                                                                                    <i class="fas fa-trash-alt me-2"></i>Supprimer
-                                                                                </button>
-                                                                            </form>
-                                                                        </li>
-                                                                    {% endif %}
-                                                                </ul>
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                                <p class="card-text">{{ comment.content }}</p>
-                                                {% if comment.rating %}
-                                                    <div class="text-warning">
-                                                        {% for i in 1..5 %}
-                                                            {% if i <= comment.rating %}
-                                                                <i class="fas fa-star"></i>
-                                                            {% else %}
-                                                                <i class="far fa-star"></i>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <a href="{{ path('app_vehicle_edit', {'id': vehicle.id}) }}" 
+                                   class="btn btn-warning">
+                                    <i class="fas fa-edit me-2"></i>Modifier
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        {# Colonne de droite : Commentaires #}
+        <div class="col-md-5">
+            <div class="sticky-top" style="top: 20px;">
+                <div class="comments-header bg-light p-3 rounded d-flex justify-content-between align-items-center mb-3" 
+                     style="cursor: pointer;" 
+                     onclick="toggleComments()">
+                    <h3 class="h5 mb-0">
+                        <i class="fas fa-comments me-2"></i>
+                        Commentaires ({{ vehicle.comments|length }})
+                    </h3>
+                    <i class="fas fa-chevron-down" id="commentsIcon"></i>
+                </div>
+
+                <div id="commentsSection" style="display: none;">
+                    {# Section nouveau commentaire #}
+                    {% if canComment %}
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-body">
+                                {{ form_start(commentForm) }}
+                                    {{ form_widget(commentForm) }}
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-2"></i>Envoyer
+                                    </button>
+                                {{ form_end(commentForm) }}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {# Liste des commentaires #}
+                    <div class="comments-list" style="max-height: 600px; overflow-y: auto;">
+                        {% if vehicle.comments is empty %}
+                            <p class="text-muted">Aucun commentaire pour le moment.</p>
+                        {% else %}
+                            {% for comment in vehicle.comments %}
+                                <div class="card shadow-sm mb-3">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="card-title mb-0">{{ comment.user.email }}</h5>
+                                            <small class="text-muted">{{ comment.createdAt|date('d/m/Y') }}</small>
+                                        </div>
+                                        <p class="card-text">{{ comment.content }}</p>
+                                        {% if comment.rating %}
+                                            <div class="text-warning">
+                                                {% for i in 1..5 %}
+                                                    <i class="fa{{ i <= comment.rating ? 's' : 'r' }} fa-star"></i>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 {% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .comments-list {
+            scrollbar-width: thin;
+            scrollbar-color: #dee2e6 #fff;
+        }
+        .comments-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .comments-list::-webkit-scrollbar-track {
+            background: #fff;
+        }
+        .comments-list::-webkit-scrollbar-thumb {
+            background-color: #dee2e6;
+            border-radius: 3px;
+        }
+    </style>
 {% endblock %}
 
 {% block javascripts %}
