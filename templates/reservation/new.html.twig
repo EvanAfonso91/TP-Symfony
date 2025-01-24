@@ -13,6 +13,29 @@
                         {{ form_start(form) }}
                             {{ form_widget(form) }}
                             <div id="dateError" class="alert alert-danger mt-3" style="display: none;"></div>
+                            
+                            {% if vehicle is not null %}
+                                <div class="price-details mt-3">
+                                    {% set days = reservation.startDate ? reservation.startDate|date('U')|date('z') - reservation.endDate|date('U')|date('z')|abs + 1 : 0 %}
+                                    {% set basePrice = days * vehicle.pricePerDay %}
+                                    
+                                    <p class="h5">Détails du prix :</p>
+                                    <ul class="list-unstyled">
+                                        <li>Nombre de jours : {{ days }}</li>
+                                        <li>Prix par jour : {{ vehicle.pricePerDay }}€</li>
+                                        <li>Prix total : 
+                                            {% if basePrice == 400 %}
+                                                <span class="text-decoration-line-through">{{ basePrice }}€</span>
+                                                <span class="badge bg-success ms-2">-10%</span>
+                                                <span class="ms-2 fw-bold">{{ (basePrice * 0.9)|round(2) }}€</span>
+                                            {% else %}
+                                                <span>{{ basePrice }}€</span>
+                                            {% endif %}
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% endif %}
+
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                                 <a href="{{ path('app_vehicle_index') }}" class="btn btn-secondary me-md-2">Retour</a>
                                 <button type="submit" class="btn btn-primary" id="submitButton">Réserver</button>
@@ -112,7 +135,6 @@
                 }
             }
 
-            // Ajouter les écouteurs d'événements
             startDateInput.addEventListener('change', validateDates);
             endDateInput.addEventListener('change', validateDates);
 

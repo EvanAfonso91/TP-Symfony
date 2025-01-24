@@ -13,6 +13,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\File;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class VehicleType extends AbstractType
 {
@@ -44,12 +45,20 @@ class VehicleType extends AbstractType
             ->add('pricePerDay', MoneyType::class, [
                 'label' => 'Prix par jour',
                 'currency' => 'EUR',
-                'attr' => ['class' => 'form-control']
+                'attr' => ['class' => 'form-control'],
+                'constraints' => [
+                    new Assert\NotBlank(),
+                    new Assert\Range([
+                        'min' => 200,
+                        'max' => 700,
+                        'notInRangeMessage' => 'Le prix doit être compris entre {{ min }}€ et {{ max }}€'
+                    ])
+                ]
             ])
             ->add('isAvailable', CheckboxType::class, [
                 'label' => 'Disponible',
                 'required' => false,
-                'attr' => ['class' => 'form-check-input']
+                'disabled' => $options['disable_availability']
             ])
             ->add('imageFile', FileType::class, [
                 'label' => 'Image du véhicule',
@@ -73,6 +82,7 @@ class VehicleType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Vehicle::class,
+            'disable_availability' => false
         ]);
     }
 }

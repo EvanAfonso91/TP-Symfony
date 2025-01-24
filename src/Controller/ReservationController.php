@@ -34,21 +34,17 @@ class ReservationController extends AbstractController
 
     #[Route('/new', name: 'app_reservation_new', methods: ['GET', 'POST'])]
     #[IsGranted('ROLE_USER')]
-    public function new(
-        Request $request, 
-        EntityManagerInterface $entityManager,
-        ReservationDateService $dateService
-    ): Response {
+    public function new(Request $request, EntityManagerInterface $entityManager, ReservationDateService $dateService): Response
+    {
         $reservation = new Reservation();
+        $vehicle = null;
         $unavailableDates = [];
         
         // Pré-remplir le véhicule si l'ID est passé dans l'URL
-        $vehicleId = null;
         if ($request->query->has('vehicle')) {
             $vehicle = $entityManager->getRepository(Vehicle::class)->find($request->query->get('vehicle'));
             if ($vehicle) {
                 $reservation->setVehicle($vehicle);
-                $vehicleId = $vehicle->getId();
                 $unavailableDates = $dateService->getUnavailableDates($vehicle);
             }
         }
@@ -80,13 +76,24 @@ class ReservationController extends AbstractController
                 }
             }
 
-            $reservation->setUser($this->getUser());
-            $reservation->setStatus('EN_ATTENTE');
-            
             // Calcul du prix total
             $days = $startDate->diff($endDate)->days + 1;
             $totalPrice = $days * $vehicle->getPricePerDay();
+
+            // Appliquer la réduction de 10% si le prix total est de 400€
+            if ($totalPrice == 400) {
+                $originalPrice = $totalPrice;
+                $totalPrice = $totalPrice * 0.9;
+                $this->addFlash('success', sprintf(
+                    'Une réduction de 10%% a été appliquée ! Prix initial : %s€, Prix final : %s€',
+                    $originalPrice,
+                    $totalPrice
+                ));
+            }
+
             $reservation->setTotalPrice($totalPrice);
+            $reservation->setUser($this->getUser());
+            $reservation->setStatus('EN_ATTENTE');
 
             $entityManager->persist($reservation);
             $entityManager->flush();
@@ -98,33 +105,37 @@ class ReservationController extends AbstractController
         return $this->render('reservation/new.html.twig', [
             'reservation' => $reservation,
             'form' => $form,
+            'vehicle' => $vehicle ?? $reservation->getVehicle(),
             'unavailableDates' => json_encode($unavailableDates),
-            'vehicleId' => $vehicleId ?? 'null'
+            'vehicleId' => $vehicle ? $vehicle->getId() : 'null'
         ]);
     }
 
-    #[Route('/status/{id}', name: 'app_reservation_status', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
-    public function changeStatus(
-        Request $request, 
-        Reservation $reservation, 
-        EntityManagerInterface $entityManager
-    ): Response {
-        $newStatus = $request->request->get('status');
-        $vehicle = $reservation->getVehicle();
-
-        // Mise à jour du statut de la réservation
-        $reservation->setStatus($newStatus);
-
-        // Mise à jour de la disponibilité du véhicule
-        if ($newStatus === Reservation::STATUS_CONFIRMED) {
-            $vehicle->setIsAvailable(false);
-        } elseif ($newStatus === Reservation::STATUS_COMPLETED || $newStatus === Reservation::STATUS_CANCELLED) {
-            $vehicle->setIsAvailable(true);
+    #[Route('/{id}/status', name: 'app_reservation_status', methods: ['POST'])]
+    public function updateStatus(Request $request, Reservation $reservation, EntityManagerInterface $entityManager): Response
+    {
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
         }
 
-        $entityManager->flush();
-        $this->addFlash('success', 'Le statut de la réservation a été mis à jour.');
+        $newStatus = $request->request->get('status');
+        $today = new \DateTime();
+
+        // Si la réservation est confirmée et en cours
+        if ($reservation->getStatus() === 'CONFIRMEE' && 
+            $today >= $reservation->getStartDate() && 
+            $today <= $reservation->getEndDate()) {
+            
+            $this->addFlash('error', 'Impossible de modifier le statut d\'une réservation en cours avant sa date de fin.');
+            return $this->redirectToRoute('app_reservation_show', ['id' => $reservation->getId()]);
+        }
+
+        // Si le statut est valide, on le met à jour
+        if (in_array($newStatus, ['EN_ATTENTE', 'CONFIRMEE', 'TERMINEE', 'ANNULEE'])) {
+            $reservation->setStatus($newStatus);
+            $entityManager->flush();
+            $this->addFlash('success', 'Le statut de la réservation a été mis à jour.');
+        }
 
         return $this->redirectToRoute('app_reservation_index');
     }

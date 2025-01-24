@@ -30,6 +30,10 @@
                                         <li class="mb-2"><i class="fas fa-info-circle me-2"></i>Modèle : {{ vehicle.model }}</li>
                                         <li class="mb-2"><i class="fas fa-tag me-2"></i>Type : {{ vehicle.type }}</li>
                                         <li class="mb-2"><i class="fas fa-euro-sign me-2"></i>Prix par jour : {{ vehicle.pricePerDay }}€</li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-bookmark me-2"></i>
+                                            Nombre total de réservations : {{ vehicle.reservations|length }}
+                                        </li>
                                     </ul>
                                 </div>
                                 {# Deuxième colonne #}

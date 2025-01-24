@@ -17,6 +17,7 @@ use App\Form\VehicleFilterType;
 use App\Service\FileUploader;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use App\Service\ReservationDateService;
+use App\Entity\Reservation;
 
 #[Route('/vehicle')]
 class VehicleController extends AbstractController
@@ -122,7 +123,25 @@ class VehicleController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function edit(Request $request, Vehicle $vehicle, EntityManagerInterface $entityManager, FileUploader $fileUploader): Response
     {
-        $form = $this->createForm(VehicleType::class, $vehicle);
+        // Vérifier si le véhicule a des réservations en cours
+        $hasActiveReservation = $entityManager->getRepository(Reservation::class)
+            ->createQueryBuilder('r')
+            ->where('r.vehicle = :vehicle')
+            ->andWhere('r.endDate > :today')
+            ->andWhere('r.status IN (:statuses)')
+            ->setParameter('vehicle', $vehicle)
+            ->setParameter('today', new \DateTime())
+            ->setParameter('statuses', ['EN_ATTENTE', 'CONFIRMEE'])
+            ->getQuery()
+            ->getResult();
+
+        if ($hasActiveReservation) {
+            $vehicle->setIsAvailable(false);
+        }
+
+        $form = $this->createForm(VehicleType::class, $vehicle, [
+            'disable_availability' => !empty($hasActiveReservation)
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -157,9 +176,36 @@ class VehicleController extends AbstractController
     public function delete(Request $request, Vehicle $vehicle, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$vehicle->getId(), $request->request->get('_token'))) {
-            $entityManager->remove($vehicle);
-            $entityManager->flush();
-            $this->addFlash('success', 'Le véhicule a été supprimé avec succès.');
+            try {
+                // Vérifier s'il y a des réservations en cours
+                $activeReservations = $entityManager->getRepository(Reservation::class)
+                    ->findBy([
+                        'vehicle' => $vehicle,
+                        'status' => ['EN_ATTENTE', 'CONFIRMEE']
+                    ]);
+
+                if (!empty($activeReservations)) {
+                    throw new \Exception('Impossible de supprimer ce véhicule car il a des réservations en cours.');
+                }
+
+                // Supprimer d'abord les commentaires associés
+                foreach ($vehicle->getComments() as $comment) {
+                    $entityManager->remove($comment);
+                }
+
+                // Supprimer les réservations terminées ou annulées
+                foreach ($vehicle->getReservations() as $reservation) {
+                    $entityManager->remove($reservation);
+                }
+
+                // Puis supprimer le véhicule
+                $entityManager->remove($vehicle);
+                $entityManager->flush();
+
+                $this->addFlash('success', 'Le véhicule a été supprimé avec succès.');
+            } catch (\Exception $e) {
+                $this->addFlash('error', $e->getMessage());
+            }
         }
 
         return $this->redirectToRoute('app_vehicle_index', [], Response::HTTP_SEE_OTHER);
